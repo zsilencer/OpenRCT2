@@ -198,10 +198,25 @@ bool sprite_file_import(const char *path, rct_g1_element *outElement, uint8 **ou
 	unsigned char *pixels;
 	unsigned int width, height;
 	unsigned int pngError;
+	bool paletted = false;
 
 	memcpy(spriteFilePalette, _standardPalette, 256 * 4);
 
-	pngError = lodepng_decode_file(&pixels, &width, &height, path, LCT_RGBA, 8);
+	if(paletted){
+		unsigned char* buffer1;
+		size_t buffer1size;
+		pngError = lodepng_load_file(&buffer1, &buffer1size, path);
+		LodePNGState state;
+		lodepng_state_init(&state);
+		state.decoder.color_convert = 0;
+		state.info_raw.colortype = LCT_PALETTE;
+		if(!pngError) pngError = lodepng_decode(&pixels, &width, &height, &state, buffer1, buffer1size);
+		lodepng_state_cleanup(&state);
+		free(buffer1);
+	}else{
+		pngError = lodepng_decode_file(&pixels, &width, &height, path, LCT_RGBA, 8);
+	}
+
 	if (pngError != 0) {
 		fprintf(stderr, "Error creating PNG data, %u: %s", pngError, lodepng_error_text(pngError));
 		return false;
@@ -230,12 +245,12 @@ bool sprite_file_import(const char *path, rct_g1_element *outElement, uint8 **ou
 		int pixels = 0;
 		bool pushRun = false;
 		for (unsigned int x = 0; x < width; x++) {
-			int paletteIndex = get_palette_index(*((uint32*)src));
-			src += 4;
+			uint8 paletteIndex = paletted ? *src : get_palette_index(*((uint32*)src));
+			src += paletted ? 1 : 4;
 			if (paletteIndex == -1) {
 				if (pixels != 0) {
 					x--;
-					src -= 4;
+					src -= paletted ? 1 : 4;
 					pushRun = true;
 				}
 			} else {
