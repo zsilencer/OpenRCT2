@@ -319,6 +319,10 @@ bool screenshot_write_png(rct_drawpixelinfo *dpi, const char *path)
 		g = RCT2_ADDRESS(0x01424680, uint8)[i * 4 + 1];
 		r = RCT2_ADDRESS(0x01424680, uint8)[i * 4 + 2];
 
+		if (i == 0) {
+			a = 0;
+		}
+
 		lodepng_palette_add(&state.info_raw, r, g, b, a);
 	}
 
@@ -350,11 +354,9 @@ void screenshot_giant()
 	int rotation = originalRotation;
 	int zoom = originalZoom;
 	int mapSize = RCT2_GLOBAL(RCT2_ADDRESS_MAP_SIZE, uint16);
-	int resolutionWidth = (mapSize * 32 * 2) >> zoom;
-	int resolutionHeight = (mapSize * 32 * 1) >> zoom;
-
-	resolutionWidth += 8;
-	resolutionHeight += 128;
+	int max_z = 255;
+	int resolutionWidth = (mapSize * 64) >> zoom;
+	int resolutionHeight = ((mapSize + max_z) * 32) >> zoom;
 
 	rct_viewport viewport;
 	viewport.x = 0;
@@ -366,11 +368,11 @@ void screenshot_giant()
 	viewport.var_11 = 0;
 	viewport.flags = 0;
 
-	int centreX = (mapSize / 2) * 32 + 16;
-	int centreY = (mapSize / 2) * 32 + 16;
+	int centreX = (mapSize / 2) * 32;
+	int centreY = (mapSize / 2) * 32;
 
 	int x, y;
-	int z = map_element_height(centreX, centreY) & 0xFFFF;
+	int z = (max_z / 2) * 32;
 	switch (rotation) {
 	case 0:
 		x = centreY - centreX;
@@ -408,7 +410,19 @@ void screenshot_giant()
 	dpi.zoom_level = 0;
 	dpi.bits = malloc(dpi.width * dpi.height);
 
+	if (!dpi.bits) {
+		log_error("Giant screenshot failed, malloc failed.");
+		window_error_open(STR_SCREENSHOT_FAILED, -1);
+		return;
+	}
+
+	memset(dpi.bits, 0, dpi.width * dpi.height);
+
+	// Make sure background graphic does not draw by setting height to 0
+	sint16 oldheight = g1Elements[3123].height;
+	g1Elements[3123].height = 0;
 	viewport_render(&dpi, &viewport, 0, 0, viewport.width, viewport.height);
+	g1Elements[3123].height = oldheight;
 
 	// Get a free screenshot path
 	char path[MAX_PATH];
@@ -419,7 +433,25 @@ void screenshot_giant()
 		return;
 	}
 
+	// Trim top of image
+	char *oldbits = dpi.bits;
+	bool topfound = false;
+	for (int y = 0; y < resolutionHeight; y++) {
+		for (int x = 0; x < resolutionWidth; x++) {
+			if (dpi.bits[x]) {
+				topfound = true;
+				break;
+			}
+		}
+		if (topfound) {
+			break;
+		}
+		dpi.bits += resolutionWidth;
+		dpi.height--;
+	}
+
 	screenshot_write_png(&dpi, path);
+	dpi.bits = oldbits;
 
 	free(dpi.bits);
 
