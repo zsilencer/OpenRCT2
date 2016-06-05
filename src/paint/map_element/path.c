@@ -90,21 +90,7 @@ const unk_supports_desc_bound_box stru_98D8D4[] = {
 
 void loc_6A37C9(rct_map_element * map_element, int height, rct_footpath_entry * dword_F3EF6C, bool word_F3F038, uint32 dword_F3EF70, uint32 dword_F3EF74);
 
-void loc_6A3B57();
-
-bool is_map_element_saved(rct_map_element * map_element)
-{
-//	rct_map_element ** savedMapElement = gTrackSavedMapElements;
-//	while (*gTrackSavedMapElements != (rct_map_element *) 0xFFFFFFFF) {
-//		if (*gTrackSavedMapElements == map_element) {
-//			return true;
-//		}
-//
-//		savedMapElement++;
-//	}
-
-	return false;
-}
+void loc_6A3B57(rct_map_element * map_element, int height, rct_footpath_entry * dword_F3EF6C, bool word_F3F038, uint32 dword_F3EF70, uint32 dword_F3EF74);
 
 void loc_6A3FED()
 {
@@ -274,7 +260,7 @@ void sub_6A4101(rct_map_element * map_element, uint16 height, uint32 ebp, bool w
 		}
 
 		// Draw ride sign
-		RCT2_CALLPROC_X(0x006A4A71, 0, 0, get_current_rotation(), height, (int) map_element, 0, ebp);
+		//RCT2_CALLPROC_X(0x006A4A71, 0, 0, get_current_rotation(), height, (int) map_element, 0, ebp);
 		return;
 	}
 
@@ -549,8 +535,7 @@ void path_paint(uint8 direction, uint16 height, rct_map_element * map_element)
 				return;
 			}
 		}
-
-		if (!is_map_element_saved(map_element)) {
+		if (!track_design_save_contains_map_element(map_element)) {
 			dword_F3EF70 = 0x21700000;
 		}
 	}
@@ -650,12 +635,7 @@ void path_paint(uint8 direction, uint16 height, rct_map_element * map_element)
 	if (dword_F3EF6C->var_0A == 0) {
 		loc_6A37C9(map_element, height, dword_F3EF6C, word_F3F038, dword_F3EF70, dword_F3EF74);
 	} else {
-		loc_6A3B57();
-		RCT2_GLOBAL(0x00F3EF6C, uint32) = (uint32) dword_F3EF6C;
-		RCT2_GLOBAL(0x00F3F038, uint16) = word_F3F038;
-		RCT2_GLOBAL(0x00F3EF70, uint16) = dword_F3EF70;
-		RCT2_GLOBAL(0x00F3EF74, uint16) = dword_F3EF74;
-		RCT2_CALLPROC_X(0x6A3B57, 0, 0, get_current_rotation(), height, (int) map_element, 0, 0);
+		loc_6A3B57(map_element, height, dword_F3EF6C, word_F3F038, dword_F3EF70, dword_F3EF74);
 	}
 	TempForScrollText = false;
 }
@@ -705,6 +685,7 @@ void loc_6A37C9(rct_map_element * map_element, int height, rct_footpath_entry * 
 	}
 
 	if (!word_F3F038 || !RCT2_GLOBAL(0x9DE57C, bool)) {
+		// 6A39B4:
 		sub_98197C(ebx | dword_F3EF70, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
 	} else {
 		uint32 image_id;
@@ -716,9 +697,7 @@ void loc_6A37C9(rct_map_element * map_element, int height, rct_footpath_entry * 
 
 		sub_98197C(image_id | dword_F3EF70, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
 
-		if (!(map_element->type & 1) && !(dword_F3EF6C->flags & 2)) {
-			// don't draw
-		} else {
+		if ((map_element_get_direction(map_element) & 1) || (dword_F3EF6C->flags & 0x2)) {
 			sub_98199C(ebx | dword_F3EF70, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
 		}
 	}
@@ -756,50 +735,142 @@ void loc_6A37C9(rct_map_element * map_element, int height, rct_footpath_entry * 
 	if (map_element->type & 1
 	    || (map_element->properties.path.edges != 0xFF && word_F3F038)
 		) {
-		RCT2_GLOBAL(0x141E9C4, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9C8, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9CC, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9D0, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9D4, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9B4, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9C0, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9B8, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9BC, uint16) = 0xFFFF;
+		paint_util_set_segment_support_height(SEGMENTS_ALL, 0xFFFF, 0);
 		return;
 	}
 
 	if (map_element->properties.path.edges == 0xFF) {
-		RCT2_GLOBAL(0x141E9C8, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9CC, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9D0, uint16) = 0xFFFF;
-		RCT2_GLOBAL(0x141E9D4, uint16) = 0xFFFF;
+		paint_util_set_segment_support_height(SEGMENT_C8 | SEGMENT_CC | SEGMENT_D0 | SEGMENT_D4, 0xFFFF, 0);
 		return;
 	}
 
-	RCT2_GLOBAL(0x141E9C4, uint16) = 0xFFFF;
+	paint_util_set_segment_support_height(SEGMENT_C4, 0xFFFF, 0);
 
 	// no idea whre bp comes from
-	uint16 bp = 0;
+	//uint16 bp = 0;
 
-	if (bp & 1) {
-		RCT2_GLOBAL(0x141E9CC, uint16) = 0xFFFF;
+	if (ebp & 1) {
+		paint_util_set_segment_support_height(SEGMENT_CC, 0xFFFF, 0);
 	}
 
-	if (bp & 2) {
-		RCT2_GLOBAL(0x141E9D4, uint16) = 0xFFFF;
+	if (ebp & 2) {
+		paint_util_set_segment_support_height(SEGMENT_D4, 0xFFFF, 0);
 	}
 
-	if (bp & 4) {
-		RCT2_GLOBAL(0x141E9D0, uint16) = 0xFFFF;
+	if (ebp & 4) {
+		paint_util_set_segment_support_height(SEGMENT_D0, 0xFFFF, 0);
 	}
 
-	if (bp & 8) {
-		RCT2_GLOBAL(0x141E9C8, uint16) = 0xFFFF;
+	if (ebp & 8) {
+		paint_util_set_segment_support_height(SEGMENT_C8, 0xFFFF, 0);
 	}
 
 }
 
-void loc_6A3B57()
+void loc_6A3B57(rct_map_element * map_element, int height, rct_footpath_entry * dword_F3EF6C, bool word_F3F038, uint32 dword_F3EF70, uint32 dword_F3EF74)
 {
+	int bp = (map_element->properties.path.type & 0xF0) >> 4;
+	uint8 ah;
+	ah = map_element->properties.path.edges << 4;
+	int index = rol16((ah << 8) | map_element->properties.path.edges, get_current_rotation()) & 0xF;
+	rct_xy16 boundBoxOffset = {.x = stru_98D804[index][0], .y = stru_98D804[index][1]};
+	rct_xy16 boundBoxSize = {.x = stru_98D804[index][2], .y = stru_98D804[index][3]};
+	ah = map_element->properties.path.edges >> 4;
+	index |= (rol16((ah << 8) | map_element->properties.path.edges, get_current_rotation()) >> 4) & 0xF0;
+	int baseImage_id;
+	if (map_element->properties.path.type & 0x4) {
+		baseImage_id = ((map_element->properties.path.type + get_current_rotation()) & 3) + 16;
+	} else {
+		baseImage_id = byte_98D6E0[index];
+	}
+	baseImage_id += dword_F3EF6C->image;
+	if (map_element->type & 1) {
+		baseImage_id += 51;
+	}
+	if (!RCT2_GLOBAL(0x9DE57C, bool)) {
+		boundBoxOffset.x = stru_98D804[0][0];
+		boundBoxOffset.y = stru_98D804[0][1];
+		boundBoxSize.x = stru_98D804[0][2];
+		boundBoxSize.y = stru_98D804[0][3];
+	}
+	// 6A3BF0:
+	if (!word_F3F038 || !RCT2_GLOBAL(0x9DE57C, bool)) {
+		// 6A3D55:
+		int image_id = baseImage_id | dword_F3EF70;
+		sub_98197C(image_id, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
+	} else
+	if (!(map_element->properties.path.type & 0x4)) {
+		// 6A3C1D:
+		int image_id = index & 0xF;
+		image_id += dword_F3EF6C->bridge_image | dword_F3EF70;
+		sub_98197C(image_id, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
+		if ((map_element_get_direction(map_element) & 1) || (dword_F3EF6C->flags & 0x2)) {
+			image_id = baseImage_id | dword_F3EF70;
+			sub_98199C(image_id, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
+		}
+	} else {
+		// 6A3CBB:
+		int image_id = (map_element->properties.path.type + get_current_rotation()) & 3;
+		image_id += (dword_F3EF6C->bridge_image + 16) | dword_F3EF70;
+		sub_98197C(image_id, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
+		if ((map_element_get_direction(map_element) & 1) || (dword_F3EF6C->flags & 0x2)) {
+			image_id = baseImage_id | dword_F3EF70;
+			sub_98199C(image_id, 0, 0, boundBoxSize.x, boundBoxSize.y, 0, height, boundBoxOffset.x, boundBoxOffset.y, height + 1, get_current_rotation());
+		}
+	}
+	// 6A3D8B:
+	sub_6A3F61(map_element, index, height, dword_F3EF6C, dword_F3EF70, dword_F3EF74, word_F3F038);
 
+	int eax = 0;
+	if (map_element->properties.path.type & 0x4) {
+		eax = 8;
+	}
+	bp = index;
+	RCT2_GLOBAL(0xF3EF6C, rct_footpath_entry *) = dword_F3EF6C; // used in 0x6A326B
+	if (!(bp & 8)) {
+		RCT2_CALLPROC_X(0x6A326B, eax, 5, get_current_rotation(), height, (int)map_element, 0, dword_F3EF70);
+	}
+	if (!(bp & 4)) {
+		RCT2_CALLPROC_X(0x6A326B, eax, 7, get_current_rotation(), height, (int)map_element, 0, dword_F3EF70);
+	}
+	if (!(bp & 2)) {
+		RCT2_CALLPROC_X(0x6A326B, eax, 8, get_current_rotation(), height, (int)map_element, 0, dword_F3EF70);
+	}
+	if (!(bp & 1)) {
+		RCT2_CALLPROC_X(0x6A326B, eax, 6, get_current_rotation(), height, (int)map_element, 0, dword_F3EF70);
+	}
+	RCT2_GLOBAL(0x9DE56A, uint16);
+	int dx = height + 32;
+	if (map_element->properties.path.type & 0x4) {
+		dx += 16;
+	}
+	if (RCT2_GLOBAL(RCT2_ADDRESS_CURRENT_PAINT_TILE_MAX_HEIGHT, sint16) < dx) {
+		RCT2_GLOBAL(RCT2_ADDRESS_CURRENT_PAINT_TILE_MAX_HEIGHT, sint16) = dx;
+		RCT2_GLOBAL(0x141E9DA, uint8) = 0x20;
+	}
+	if (map_element->type & 1) {
+		paint_util_set_segment_support_height(SEGMENTS_ALL, 0xFFFF, 0);
+		return;
+	}
+	if (map_element->properties.path.edges == 0xFF) {
+		paint_util_set_segment_support_height(SEGMENT_C8 | SEGMENT_CC | SEGMENT_D0 | SEGMENT_D4, 0xFFFF, 0);
+		return;
+	}
+	if (word_F3F038) {
+		paint_util_set_segment_support_height(SEGMENTS_ALL, 0xFFFF, 0);
+		return;
+	}
+	paint_util_set_segment_support_height(SEGMENT_C4, 0xFFFF, 0);
+	if (bp & 1) {
+		paint_util_set_segment_support_height(SEGMENT_CC, 0xFFFF, 0);
+	}
+	if (bp & 2) {
+		paint_util_set_segment_support_height(SEGMENT_D4, 0xFFFF, 0);
+	}
+	if (bp & 4) {
+		paint_util_set_segment_support_height(SEGMENT_D0, 0xFFFF, 0);
+	}
+	if (bp & 8) {
+		paint_util_set_segment_support_height(SEGMENT_C8, 0xFFFF, 0);
+	}
 }
