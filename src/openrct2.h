@@ -20,6 +20,8 @@
 #include "common.h"
 #include "platform/platform.h"
 
+#include <openssl/evp.h>
+
 enum {
 	STARTUP_ACTION_INTRO,
 	STARTUP_ACTION_TITLE,
@@ -38,6 +40,8 @@ extern utf8 gCustomOpenrctDataPath[MAX_PATH];
 extern utf8 gCustomPassword[MAX_PATH];
 extern bool gOpenRCT2Headless;
 extern bool gOpenRCT2ShowChangelog;
+
+extern EVP_MD_CTX *gHashCTX;
 
 #ifndef DISABLE_NETWORK
 extern int gNetworkStart;

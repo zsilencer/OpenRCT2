@@ -586,7 +586,7 @@ bool Network::CheckSRAND(uint32 tick, uint32 srand0)
 
 	if (tick == server_srand0_tick) {
 		server_srand0_tick = 0;
-		if (srand0 != server_srand0) {
+		if ((srand0 != server_srand0) || strcmp(sprite_checksum(), server_sprite_hash)) {
 			return false;
 		}
 	}
@@ -1081,6 +1081,7 @@ void Network::Server_Send_TICK()
 	last_tick_sent_time = SDL_GetTicks();
 	std::unique_ptr<NetworkPacket> packet = std::move(NetworkPacket::Allocate());
 	*packet << (uint32)NETWORK_COMMAND_TICK << (uint32)gCurrentTicks << (uint32)gScenarioSrand0;
+	packet->WriteString(sprite_checksum());
 	SendPacketToClients(*packet);
 }
 
@@ -1743,6 +1744,8 @@ void Network::Client_Handle_TICK(NetworkConnection& connection, NetworkPacket& p
 	if (server_srand0_tick == 0) {
 		server_srand0 = srand0;
 		server_srand0_tick = server_tick;
+		const char* text = packet.ReadString();
+		strncpy(server_sprite_hash, text, sizeof(server_sprite_hash));
 	}
 }
 

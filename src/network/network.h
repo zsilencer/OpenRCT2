@@ -43,6 +43,7 @@ extern "C" {
 #include "../game.h"
 #include "../platform/platform.h"
 #include "../localisation/string_ids.h"
+#include <openssl/evp.h>
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -191,6 +192,7 @@ private:
 	uint32 server_tick = 0;
 	uint32 server_srand0 = 0;
 	uint32 server_srand0_tick = 0;
+	char server_sprite_hash[EVP_MAX_MD_SIZE + 1];
 	uint8 player_id = 0;
 	std::list<std::unique_ptr<NetworkConnection>> client_connection_list;
 	std::multiset<GameCommand> game_command_queue;

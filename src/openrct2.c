@@ -176,6 +176,9 @@ bool openrct2_initialise()
 {
 	utf8 userPath[MAX_PATH];
 
+	gHashCTX = EVP_MD_CTX_create();
+	assert(gHashCTX != NULL);
+
 	platform_resolve_openrct_data_path();
 	platform_resolve_user_data_path();
 	platform_get_user_directory(userPath, NULL);
@@ -460,12 +463,15 @@ static void openrct2_loop()
 	} while (!_finished);
 }
 
+EVP_MD_CTX *gHashCTX;
+
 /**
  * Causes the OpenRCT2 game loop to finish.
  */
 void openrct2_finish()
 {
 	_finished = 1;
+	EVP_MD_CTX_destroy(gHashCTX);
 }
 
 void openrct2_reset_object_tween_locations()

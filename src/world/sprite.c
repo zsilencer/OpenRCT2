@@ -517,6 +517,40 @@ void sprite_move(sint16 x, sint16 y, sint16 z, rct_sprite* sprite){
 	sprite->unknown.z = z;
 }
 
+static unsigned char hash[EVP_MAX_MD_SIZE + 1];
+
+char * sprite_checksum()
+{
+	if (EVP_DigestInit_ex(gHashCTX, EVP_sha1(), NULL) <= 0)
+	{
+		openrct2_assert(false, "Failed to initialise SHA1 engine");
+	}
+	for (size_t i = 0; i < MAX_SPRITES; i++)
+	{
+		rct_sprite *sprite = get_sprite(i);
+		if (sprite->unknown.sprite_identifier != SPRITE_IDENTIFIER_NULL)
+		{
+			if (EVP_DigestUpdate(gHashCTX, sprite, sizeof(rct_sprite)) <= 0)
+			{
+				openrct2_assert(false, "Failed to update digest");
+			}
+		}
+	}
+	unsigned char localhash[EVP_MAX_MD_SIZE + 1];
+	unsigned int size = sizeof(localhash);
+	EVP_DigestFinal(gHashCTX, localhash, &size);
+	assert(size <= sizeof(localhash));
+	localhash[sizeof(localhash) - 1] = '\0';
+	char *x = hash;
+	for (unsigned int i = 0; i < size; i++)
+	{
+		sprintf(x, "%02x", localhash[i]);
+		x += 2;
+	}
+	*x = '\0';
+	return (char *)hash;
+}
+
 /**
  *
  *  rct2: 0x0069EDB6
