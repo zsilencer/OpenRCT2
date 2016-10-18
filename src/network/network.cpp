@@ -992,12 +992,14 @@ void Network::Server_Send_TICK()
 	// Simple counter which limits how often a sprite checksum gets sent.
 	// This can get somewhat expensive, so we don't want to push it every tick in release,
 	// but debug version can check more often.
+#ifdef DEBUG
 	static int checksum_counter = 0;
 	checksum_counter++;
 	if (checksum_counter >= 100) {
 		checksum_counter = 0;
 		flags |= NETWORK_TICK_FLAG_CHECKSUMS;
 	}
+#endif
 	// Send flags always, so we can understand packet structure on the other end,
 	// and allow for some expansion.
 	*packet << flags;
